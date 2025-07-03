@@ -165,13 +165,16 @@ class ParttoolTarget:
         if partition.readonly and not ignore_readonly:
             raise SystemExit(f'"{partition.name}" partition is read-only, (use the --ignore-readonly flag to skip it)')
 
-        self.erase_partition(partition_id)
+        if input is None:
+            raise SystemExit('Input file is required')
 
         with open(input, 'rb') as f:
             content_len = len(f.read())
 
             if content_len > partition.size:
                 raise Exception('Input file size exceeds partition size')
+
+        self.erase_partition(partition_id)
 
         self._call_esptool(['write_flash', str(partition.offset), input] + self.esptool_write_args)
 
