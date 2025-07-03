@@ -174,8 +174,6 @@ class ParttoolTarget:
             if content_len > partition.size:
                 raise Exception('Input file size exceeds partition size')
 
-        self.erase_partition(partition_id)
-
         self._call_esptool(['write_flash', str(partition.offset), input] + self.esptool_write_args)
 
 
