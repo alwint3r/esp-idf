@@ -151,10 +151,24 @@ class ParttoolTarget:
 
         return partition
 
-    def erase_partition(self, partition_id, offset=None, size=None):
+    def erase_partition(self, partition_id, offset=0):
         partition = self.get_partition_info(partition_id)
-        offset = offset if offset is not None else partition.offset
-        size = size if size is not None else partition.size
+        if offset < 0:
+            raise SystemExit('Offset must not be negative')
+
+        offset = partition.offset + offset
+        if offset % 4096 != 0:
+            offset = ((offset + 4095) // 4096) * 4096
+
+        partition_end = partition.offset + partition.size
+
+        if offset > partition_end:
+            raise SystemExit(f'Offset is outside partition "{partition.name}" boundary')
+
+        if offset == partition_end:
+            return
+
+        size = partition_end - offset
         self._call_esptool(['erase_region', str(offset), str(size)] + self.esptool_erase_args)
 
     def read_partition(self, partition_id, output):
@@ -176,14 +190,7 @@ class ParttoolTarget:
             if content_len > partition.size:
                 raise Exception('Input file size exceeds partition size')
 
-        erase_offset = partition.offset + content_len
-        if erase_offset % 4096 != 0:
-            erase_offset = ((erase_offset + 4095) // 4096) * 4096
-
-        if erase_offset < partition.offset + partition.size:
-            erase_size = (partition.offset + partition.size) - erase_offset
-            self.erase_partition(partition_id, erase_offset, erase_size)
-
+        self.erase_partition(partition_id, content_len)
         self._call_esptool(['write_flash', str(partition.offset), input] + self.esptool_write_args)
 
 
